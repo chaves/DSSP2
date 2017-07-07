@@ -112,7 +112,7 @@ print data.head(5)
 print "################"
 
 print "add new column################"
-data.withColumn('product_title_clean', rmP(data["product_title"])).select('product_title','product_title_clean').show(5)
+data.withColumn('product_title_clean', data["product_title"]).select('product_title','product_title_clean').show(5)
 print "test clean data################"
 print data.head(5)
 

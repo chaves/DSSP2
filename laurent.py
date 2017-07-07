@@ -42,7 +42,7 @@ def tokenize(x):
     doc =[ word for word in words if word not in stopwords  ]
     stemmer=PorterStemmer()
     for i,word in enumerate(doc):
-        doc[i]=stemmer.stem(word.decode('utf-8'))
+        doc[i]=stemmer.stem(word.decode('ascii'))
     return ' '.join(doc)
 
 def fixEncoding(x):

@@ -10,7 +10,7 @@ from pyspark.ml.linalg import DenseVector
 from pyspark.sql import Row
 from functools import partial
 from pyspark.ml.regression import LinearRegression
-import CommonFonc
+import CommonFonc as cf
 
 
 	
@@ -63,7 +63,7 @@ print "################"
 
 #attributes: 0-N lines per product
 #Step 1 : fix encoding and get data as an RDD (id,"<attribute name> <value>")
-attRDD=attributes.rdd.map(fixEncoding)
+attRDD=attributes.rdd.map(cf.fixEncoding)
 print "new RDD:"
 print attRDD.first()
 print "################"

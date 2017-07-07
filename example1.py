@@ -89,12 +89,15 @@ print "################"
 #Step 0:clean the data
 
 print "check the types"
-print fulldata.dtypes
+#print fulldata.dtypes
+print "################"
 print "CLEANING Data:"
 fulldata["product_title_clean"] = fulldata["product_title"].apply(cf.rmP())
-print fulldata["product_title_clean"].head()
+#print fulldata["product_title_clean"].head()
 #TF-IDF features
+
 #Step 1: split text field into words
+print "STEP 1################"
 tokenizer = Tokenizer(inputCol="product_title_clean", outputCol="words_title")
 fulldata = tokenizer.transform(fulldata)
 print "Tokenized Title:"

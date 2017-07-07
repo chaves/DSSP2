@@ -91,7 +91,7 @@ print "################"
 print "check the types"
 print fulldata.dtypes
 print "CLEANING Data:"
-fulldata["product_title_clean"] = fulldata["product_title_clean"].apply(cf.rmP())
+fulldata["product_title_clean"] = fulldata["product_title"].apply(cf.rmP())
 print fulldata["product_title_clean"].head()
 #TF-IDF features
 #Step 1: split text field into words

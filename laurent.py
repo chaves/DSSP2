@@ -45,8 +45,6 @@ def tokenize(x):
         doc[i]=stemmer.stem(word.decode('utf-8'))
     return ' '.join(doc)
 
-tokenize_udf = udf(tokenize,StringType())
-
 def fixEncoding(x):
     # fix encoding in fields name and value
     id = x['product_uid']
@@ -102,6 +100,10 @@ def newFeatures(row):
 
 
 sc = SparkContext(appName="Example1")
+
+
+tokenize_udf = udf(tokenize,StringType())
+
 
 sqlContext = HiveContext(sc)
 counter = 0

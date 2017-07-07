@@ -83,9 +83,12 @@ print "Joined Data:"
 print fulldata.head()
 print "################"
 
+
+#Step 0:clean the data
+fulldata["product_title_clean"] = fulldata["product_title_clean"].apply(cf.cleanData())
 #TF-IDF features
 #Step 1: split text field into words
-tokenizer = Tokenizer(inputCol="product_title", outputCol="words_title")
+tokenizer = Tokenizer(inputCol="product_title_clean", outputCol="words_title")
 fulldata = tokenizer.transform(fulldata)
 print "Tokenized Title:"
 print fulldata.head()

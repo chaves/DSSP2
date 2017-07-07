@@ -10,7 +10,6 @@ from pyspark.ml.linalg import DenseVector
 from pyspark.sql import Row
 from functools import partial
 from pyspark.ml.regression import LinearRegression
-from check import *
 import CommonFonc as cf
 
 

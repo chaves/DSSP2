@@ -40,7 +40,8 @@ def rmP(x):
         doc[i]=stemmer.stem(word.decode('utf-8'))
     return ' '.join(doc)
 
-
+def rmP2(x):
+    return 'hello'
 
 
 def fixEncoding(x):
@@ -111,7 +112,7 @@ print data.head(5)
 print "################"
 
 print "add new column################"
-data.withColumn('product_title_clean', rmP(data["product_title"])).select('product_title','product_title_clean').show(5)
+data.withColumn('product_title_clean', rmP2(data["product_title"])).select('product_title','product_title_clean').show(5)
 print "test clean data################"
 print data.head(5)
 

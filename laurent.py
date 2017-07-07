@@ -16,6 +16,7 @@ from nltk.stem.porter import *
 
 #!pip install -U nltk
 
+print "bonjour Axel"
 
 stopwords = ['i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', 'your', 'yours',
                  'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she', 'her', 'hers',

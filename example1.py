@@ -62,6 +62,8 @@ print attributes.head()
 print "################"
 
 #attributes: 0-N lines per product
+
+
 #Step 1 : fix encoding and get data as an RDD (id,"<attribute name> <value>")
 attRDD=attributes.rdd.map(cf.fixEncoding)
 print "new RDD:"
@@ -86,6 +88,7 @@ print "################"
 
 #Step 0:clean the data
 fulldata["product_title_clean"] = fulldata["product_title_clean"].apply(cf.cleanData())
+print fulldata["product_title_clean"]
 #TF-IDF features
 #Step 1: split text field into words
 tokenizer = Tokenizer(inputCol="product_title_clean", outputCol="words_title")

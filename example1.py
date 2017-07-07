@@ -95,7 +95,7 @@ print "CLEANING Data:"
 fulldata["product_title_clean"] = fulldata["product_title"].apply(cf.rmP())
 #print fulldata["product_title_clean"].head()
 #TF-IDF features
-
+"""
 #Step 1: split text field into words
 print "STEP 1################"
 tokenizer = Tokenizer(inputCol="product_title_clean", outputCol="words_title")
@@ -149,3 +149,4 @@ result=lrModel.transform(sqlContext.createDataFrame(test))
 #Compute mean squared error metric
 MSE = result.rdd.map(lambda r: (r['label'] - r['prediction'])**2).mean()
 print("Mean Squared Error is : " + str(MSE))
+"""

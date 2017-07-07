@@ -18,30 +18,22 @@ from nltk.stem.porter import *
 
 #print "bonjour Axel"
 
+# Module-level global variables for the `tokenize` function below
+PUNCTUATION = set(string.punctuation)
+STOPWORDS = set(stopwords.words('english'))
+STEMMER = PorterStemmer()
 
-
-def rmP(x):
-        stopwords = ['i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', 'your', 'yours',
-                     'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she', 'her', 'hers',
-                     'herself', 'it', 'its', 'itself', 'they', 'them', 'their', 'theirs', 'themselves',
-                     'what', 'which', 'who', 'whom', 'this', 'that', 'these', 'those', 'am', 'is', 'are',
-                     'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'having', 'do', 'does',
-                     'did', 'doing', 'a', 'an', 'the', 'and', 'but', 'if', 'or', 'because', 'as', 'until',
-                     'while', 'of', 'at', 'by', 'for', 'with', 'about', 'against', 'between', 'into',
-                     'through', 'during', 'before', 'after', 'above', 'below', 'to', 'from', 'up', 'down',
-                     'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here',
-                     'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more',
-                     'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so',
-                     'than', 'too', 'very', 's', 't', 'can', 'will', 'just', 'don', 'should', 'now']
-        p=set(string.punctuation)
-        doc=''.join([c for c in str(x).lower() if c not in p ])
-        words=doc.split()
-        doc =[ word for word in words if word not in stopwords  ]
-        stemmer=PorterStemmer()
-        for i,word in enumerate(doc):
-            doc[i]=stemmer.stem(word.decode('utf-8'))
-        return ' '.join(doc)
-
+# Function to break text into "tokens", lowercase them, remove punctuation and stopwords, and stem them
+def tokenize(text):
+    tokens = word_tokenize(text)
+    lowercased = [t.lower() for t in tokens]
+    no_punctuation = []
+    for word in lowercased:
+        punct_removed = ''.join([letter for letter in word if not letter in PUNCTUATION])
+        no_punctuation.append(punct_removed)
+    no_stopwords = [w for w in no_punctuation if not w in STOPWORDS]
+    stemmed = [STEMMER.stem(w) for w in no_stopwords]
+    return [w for w in stemmed if w]
 
 def fixEncoding(x):
     # fix encoding in fields name and value
@@ -112,7 +104,8 @@ print data.head(5)
 print "################"
 
 print "add new column################"
-data.withColumn('product_title_clean', data["product_title"]).select('product_title','product_title_clean').show(5)
+data.withColumn('product_title_clean', lambda (row): tokenize(row["product_title"])).select('product_title','product_title_clean').show(5)
+lambda (label, text): (label, tokenize(text)
 print "test clean data################"
 print data.head(5)
 

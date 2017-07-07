@@ -11,7 +11,7 @@ from pyspark.sql import Row
 from functools import partial
 from pyspark.ml.regression import LinearRegression
 from check import *
-import CommonFonc
+import CommonFonc as cf
 
 
 sc = SparkContext(appName="Example1")
@@ -38,7 +38,7 @@ print "################"
 
 #attributes: 0-N lines per product
 #Step 1 : fix encoding and get data as an RDD (id,"<attribute name> <value>")
-attRDD=attributes.rdd.map(fixEncoding)
+attRDD=attributes.rdd.map(cf.fixEncoding)
 print "new RDD:"
 print attRDD.first()
 print "################"
@@ -62,7 +62,7 @@ print "################"
 #Step 1: build dictionary model
 model=sc.broadcast(train(atrDF.rdd,'attributes'))
 #apply model to  query terms to correct them based on model dictionary
-fulldata=sqlContext.createDataFrame(fulldata.rdd.map(partial(cleanData,model=model)))
+fulldata=sqlContext.createDataFrame(fulldata.rdd.map(partial(cf.cleanData,model=model)))
 print "ADDED a column with new cleaned query terms :"
 print fulldata.head()
 print "################"

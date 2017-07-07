@@ -110,6 +110,10 @@ print "data loaded - head:"
 print data.head()
 print "################"
 
+
+"""
+
+
 attributes = sqlContext.read.format("com.databricks.spark.csv"). \
     option("header", "true"). \
     option("inferSchema", "true"). \
@@ -192,3 +196,5 @@ result = lrModel.transform(sqlContext.createDataFrame(test))
 # Compute mean squared error metric
 MSE = result.rdd.map(lambda r: (r['label'] - r['prediction']) ** 2).mean()
 print("Mean Squared Error = " + str(MSE))
+
+"""

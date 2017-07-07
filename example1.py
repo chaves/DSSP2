@@ -160,4 +160,4 @@ lrModel = lr.fit(sqlContext.createDataFrame(train))
 result=lrModel.transform(sqlContext.createDataFrame(test))
 #Compute mean squared error metric
 MSE = result.rdd.map(lambda r: (r['label'] - r['prediction'])**2).mean()
-print("Mean Squared Error = " + str(MSE))
+print("Mean Squared Error is : " + str(MSE))

@@ -104,6 +104,7 @@ def newFeatures(row):
 sc = SparkContext(appName="Example1")
 
 sqlContext = HiveContext(sc)
+counter = 0
 print "###############"
 # READ data
 data = sqlContext.read.format("com.databricks.spark.csv"). \

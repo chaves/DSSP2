@@ -12,7 +12,7 @@ from functools import partial
 from pyspark.ml.regression import LinearRegression
 import CommonFonc as cf
 
-
+print "HELLO ALL"
 	
 def addFeatureLen(row):
 	vector=row['tf_idf']

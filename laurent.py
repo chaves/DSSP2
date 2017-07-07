@@ -18,6 +18,8 @@ from nltk.stem.porter import *
 
 #print "bonjour Axel"
 
+counter = 0
+
 stopwords = ['i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', 'your', 'yours',
                  'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she', 'her', 'hers',
                  'herself', 'it', 'its', 'itself', 'they', 'them', 'their', 'theirs', 'themselves',
@@ -31,17 +33,18 @@ stopwords = ['i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you',
                  'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so',
                  'than', 'too', 'very', 's', 't', 'can', 'will', 'just', 'don', 'should', 'now']
 def rmP(x):
-    p=set(string.punctuation)
-    doc=''.join([c for c in str(x).lower() if c not in p ])
-    words=doc.split()
-    doc =[ word for word in words if word not in stopwords  ]
-    stemmer=PorterStemmer()
-    for i,word in enumerate(doc):
-        doc[i]=stemmer.stem(word.decode('utf-8'))
-    return ' '.join(doc)
-
-def rmP2(x):
-    return 'hello'
+    if counter > 2:
+        return 'test'
+    else:
+        counter +=1
+        p=set(string.punctuation)
+        doc=''.join([c for c in str(x).lower() if c not in p ])
+        words=doc.split()
+        doc =[ word for word in words if word not in stopwords  ]
+        stemmer=PorterStemmer()
+        for i,word in enumerate(doc):
+            doc[i]=stemmer.stem(word.decode('utf-8'))
+        return ' '.join(doc)
 
 
 def fixEncoding(x):

@@ -75,7 +75,7 @@ def addFeatureLen(row):
 
 def cleanData(row, model):
     # we are going to fix search term field
-    text = row['search_term'].split()
+    text = rmP(row['search_term']).split()
     for i, v in enumerate(text):
         text[i] = correct(v, model)
     data = row.asDict()

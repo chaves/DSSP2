@@ -10,21 +10,9 @@ from pyspark.ml.linalg import DenseVector
 from pyspark.sql import Row
 from functools import partial
 from pyspark.ml.regression import LinearRegression
+import CommonFonc
 
 
-
-def fixEncoding(x):
-	# fix encoding in fields name and value
-	id=x['product_uid']
-	name=''
-	if x['name'] is not None:
-		name=x['name'].encode("UTF-8")
-	value=""
-	if x['value'] is not None:
-		value=x['value'].encode("UTF-8")
-	retVal='%s %s.'%(name,value)
-	#return tuple instead of row 
-	return (id,[retVal])
 	
 def addFeatureLen(row):
 	vector=row['tf_idf']
@@ -42,20 +30,7 @@ def addFeatureLen(row):
 	#fill in the values for the fields
 	newRow=newRow(*data.values())
 	return newRow
-	
-def cleanData(row,model):
-	#we are going to fix search term field
-	text=row['search_term'].split()
-	for i,v in enumerate(text):
-		text[i]=correct(v,model)
-	data=row.asDict()
-	#create new field for cleaned version
-	data['search_term2']= text
-	newRow=Row(*data.keys())
-	newRow=newRow(*data.values())
-	return newRow
-	
-	
+
 def newFeatures(row):
 	vector=row['tf_idf']
 	data=row.asDict()

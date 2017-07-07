@@ -37,12 +37,12 @@ stopwords = ['i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you',
 
 def tokenize(x):
     p=set(string.punctuation)
-    doc=''.join([c for c in str(x).lower() if c not in p ])
+    doc=''.join([c for c in str(x.encode("UTF-8")).lower() if c not in p ])
     words=doc.split()
     doc =[ word for word in words if word not in stopwords  ]
     stemmer=PorterStemmer()
     for i,word in enumerate(doc):
-        doc[i]=stemmer.stem(word.decode('ascii'))
+        doc[i]=stemmer.stem(word.decode('UTF-8'))
     return ' '.join(doc)
 
 def fixEncoding(x):

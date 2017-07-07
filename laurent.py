@@ -2,6 +2,8 @@ from pyspark import SparkContext
 import pyspark
 from pyspark.conf import SparkConf
 from pyspark.sql import SQLContext
+from pyspark.sql.types import StringType
+from pyspark.sql.functions import udf
 from pyspark.sql import HiveContext
 from pyspark.sql import SparkSession
 from pyspark.ml.feature import HashingTF, IDF, Tokenizer
@@ -31,6 +33,8 @@ stopwords = ['i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you',
                  'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more',
                  'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so',
                  'than', 'too', 'very', 's', 't', 'can', 'will', 'just', 'don', 'should', 'now']
+
+
 def tokenize(x):
     p=set(string.punctuation)
     doc=''.join([c for c in str(x).lower() if c not in p ])
@@ -40,6 +44,8 @@ def tokenize(x):
     for i,word in enumerate(doc):
         doc[i]=stemmer.stem(word.decode('utf-8'))
     return ' '.join(doc)
+
+tokenize_udf = udf(tokenize,StringType())
 
 def fixEncoding(x):
     # fix encoding in fields name and value
@@ -110,7 +116,7 @@ print data.head(5)
 print "################"
 
 print "add new column################"
-data.withColumn('product_title_clean', lambda (row): tokenize(row["product_title"]))#.select('product_title','product_title_clean').show(5)
+data.withColumn('product_title_clean', tokenize_udf(data["product_title"]))#.select('product_title','product_title_clean').show(5)
 
 print "test clean data################"
 print data.head(5)

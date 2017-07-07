@@ -105,7 +105,7 @@ print "################"
 
 print "add new column################"
 data.withColumn('product_title_clean', lambda (row): tokenize(row["product_title"])).select('product_title','product_title_clean').show(5)
-lambda (label, text): (label, tokenize(text)
+
 print "test clean data################"
 print data.head(5)
 

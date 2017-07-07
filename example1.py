@@ -89,7 +89,7 @@ print "################"
 #Step 0:clean the data
 
 print "check the types"
-print(fulldata.dtypes)
+print fulldata.dtypes
 print "CLEANING Data:"
 fulldata["product_title_clean"]
 fulldata["product_title_clean"] = fulldata["product_title_clean"].apply(cf.rmP())

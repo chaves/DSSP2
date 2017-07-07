@@ -13,6 +13,7 @@ from pyspark.ml.regression import LinearRegression
 import string
 import nltk
 from nltk.stem.porter import *
+from nltk.corpus import stopwords
 
 #!pip install -U nltk
 

@@ -179,7 +179,7 @@ print "################"
 
 # TF-IDF features
 #Step 0 : make one mega text column text_clean
-fulldata = sqlContext.createDataFrame(fulldata.withColumn('text_clean', tokenize_udf(data["product_title"]) + tokenize_udf(data["attributes"])).rdd)
+fulldata = sqlContext.createDataFrame(fulldata.withColumn('text_clean', tokenize_udf(fulldata["product_title"]) + tokenize_udf(fulldata["attributes"])).rdd)
 
 # Step 1: split text field into words
 tokenizer = Tokenizer(inputCol="text_clean", outputCol="words_title")

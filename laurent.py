@@ -187,10 +187,9 @@ fulldata = sqlContext.createDataFrame(fulldata.withColumn('title_clean', tokeniz
 print "Clean attribute"
 fulldata = sqlContext.createDataFrame(fulldata.withColumn('attribute_clean', tokenize_udf(fulldata["attributes"])).rdd)
 
-"""
-df = df.withColumn('joined_column', 
-                    sf.concat(sf.col('colname1'),sf.lit('_'), sf.col('colname2')))
-"""
+print "merge cleaning"
+fulldata = sqlContext.createDataFrame(fulldata.withColumn('text_clean', sf.concat(sf.col('title_clean'),sf.lit(' '), sf.col('attribute_clean'))).rdd)
+print fulldata.head()
 
 # Step 1: split text field into words
 tokenizer = Tokenizer(inputCol="text_clean", outputCol="words_title")

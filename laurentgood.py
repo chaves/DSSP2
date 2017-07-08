@@ -146,7 +146,7 @@ def newFeatures(row):
     vector2 = row['tf_idfs']
     cos = 0
     try:
-        cos = vector1.dot(vector2) / (sf.sqrt(vector1.dot(vector1) * vector2.dot(vector2) ))
+        cos = vector1.dot(vector2) #/ (sf.sqrt(vector1.dot(vector1) * vector2.dot(vector2) ))
     except:
         pass
     data = row.asDict()

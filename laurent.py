@@ -118,7 +118,7 @@ print data.head(5)
 print "################"
 
 print "add new column################"
-data.withColumn('product_title_clean', tokenize_udf(data["product_title"])).select('product_title','product_title_clean').show(5)
+data = data.withColumn('product_title_clean', tokenize_udf(data["product_title"]))
 
 print "test clean data################"
 print data.head(5)

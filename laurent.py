@@ -62,14 +62,16 @@ def fixEncoding(x):
     # return tuple instead of row
     return (id, [retVal])
 
-def fixEncodingDescription(x):
-    # fix encoding in fields name and value
-    id = x['product_uid']
-    product_description = ''
-    if x['product_description'] is not None:
-        product_description = x['product_description'].encode("UTF-8")
-    # return tuple instead of row
-    return (id, product_description)
+
+def fixEncoding2(x):
+	# fix encoding in fields name and value
+	id=x['product_uid']
+	product_description=''
+	if x['product_description'] is not None:
+		product_description=x['product_description'].encode("UTF-8")
+	retVal='%s.'%product_description
+	#return tuple instead of row
+	return (id,[retVal])
 
 
 
@@ -85,6 +87,24 @@ def addFeatureLen(row):
     # we cannot change the input Row so we need to create a new one
     data = row.asDict()
     data['tf_idf'] = SparseVector(size, newVector)
+    # new Row object with specified NEW fields
+    newRow = Row(*data.keys())
+    # fill in the values for the fields
+    newRow = newRow(*data.values())
+    return newRow
+
+
+def addFeatureLenS(row):
+    vector = row['tf_idfs']
+    size = vector.size
+    newVector = {}
+    for i, v in enumerate(vector.indices):
+        newVector[v] = vector.values[i]
+    newVector[size] = len(vector.indices)
+    size += 1
+    # we cannot change the input Row so we need to create a new one
+    data = row.asDict()
+    data['tf_idfs'] = SparseVector(size, newVector)
     # new Row object with specified NEW fields
     newRow = Row(*data.keys())
     # fill in the values for the fields
@@ -122,12 +142,19 @@ def cleanData(row, model):
 
 
 def newFeatures(row):
-    vector = row['tf_idf']
+    vector1 = row['tf_idf']
+    vector2 = row['tf_idfs']
+    cos = 0
+    try:
+        cos = vector1.dot(vector2) / (sf.sqrt(vector1.dot(vector1) * vector2.dot(vector2) ))
+    except:
+        pass
     data = row.asDict()
-    data['features'] = DenseVector([len(vector.indices), vector.values.min()])
+    data['features'] = DenseVector([cos])
     newRow = Row(*data.keys())
     newRow = newRow(*data.values())
     return newRow
+
 
 
 sc = SparkContext(appName="Example1")
@@ -160,28 +187,6 @@ print data.head(5)
 
 
 
-#JOIN ON PRODUCT DEFINITION
-
-descritpion = sqlContext.read.format("com.databricks.spark.csv"). \
-    option("header", "true"). \
-    option("inferSchema", "true"). \
-    load("/dssp/datacamp/product_descriptions.csv").repartition(100)
-
-print "descritpion loaded - head:"
-print descritpion.head()
-print "################"
-
-# attributes: 0-N lines per product
-# Step 1 : fix encoding and get data as an RDD (id,"<attribute name> <value>")
-descRDD = descritpion.rdd.map(fixEncodingDescription)
-print "new RDD:"
-print descRDD.first()
-print "################"
-# Step 4 join data
-fulldatatemp = data.join(descRDD, ['product_uid'], 'left_outer')
-print "Joined Data:"
-print fulldatatemp.head()
-print "################"
 
 
 
@@ -214,7 +219,39 @@ print "New dataframe from aggregated attributes:"
 print atrDF.head()
 print "################"
 # Step 4 join data
-fulldata = fulldatatemp.join(atrDF, ['product_uid'], 'left_outer')
+fulldata = data.join(atrDF, ['product_uid'], 'left_outer')
+print "Joined Data:"
+print fulldata.head()
+print "################"
+
+productDescription = sqlContext.read.format("com.databricks.spark.csv"). \
+    option("header", "true"). \
+    option("inferSchema", "true"). \
+    load("/dssp/datacamp/product_descriptions.csv").repartition(100)
+
+print "product description loaded - head:"
+print productDescription.head()
+print "################"
+
+
+#product description: 0-N lines per product
+#Step 1 : fix encoding and get data as an RDD (id,"<product description> <value>")
+prodDesRDD=productDescription.rdd.map(fixEncoding2)
+print "new RDD:"
+print prodDesRDD.first()
+print "################"
+#Step 2 : group product descriptions by product id
+prodDesAG=prodDesRDD.reduceByKey(lambda x,y:x+y).map(lambda x:(x[0],' '.join(x[1])))
+print "Aggregated by product_id:"
+print prodDesAG.first()
+print "################"
+#Step 3 create new dataframe from aggregated product description
+prodDesDF=sqlContext.createDataFrame(prodDesAG,["product_uid", "product_description"])
+print "New dataframe from aggregated product descriptions:"
+print prodDesDF.head()
+print "################"
+#Step 4 join data
+fulldata=fulldata.join(prodDesDF,['product_uid'],'left_outer')
 print "Joined Data:"
 print fulldata.head()
 print "################"
@@ -231,15 +268,19 @@ print "merge cleaning"
 fulldata = sqlContext.createDataFrame(fulldata.withColumn('text_clean_temp', sf.concat(sf.col('title_clean'),sf.lit(' '), sf.col('attribute_clean'))).rdd)
 fulldata = sqlContext.createDataFrame(fulldata.withColumn('text_clean', sf.concat(sf.col('text_clean_temp'),sf.lit(' '), sf.col('description_clean'))).rdd)
 print fulldata.head()
+print "Clean search"
+fulldata = sqlContext.createDataFrame(fulldata.withColumn('search_term_clean', tokenize_udf(fulldata["search_term"])).rdd)
+
+fulldata=fulldata.select(['product_uid','id','search_term_clean','relevance','text_clean'])
 
 # Step 1: split text field into words
-tokenizer = Tokenizer(inputCol="text_clean", outputCol="words_title")
+tokenizer = Tokenizer(inputCol="text_clean", outputCol="text_token")
 fulldata = tokenizer.transform(fulldata)
-print "Tokenized Title:"
+print "Tokenized Text:"
 print fulldata.head()
 print "################"
 # Step 2: compute term frequencies
-hashingTF = HashingTF(inputCol="words_title", outputCol="tf")
+hashingTF = HashingTF(inputCol="text_token", outputCol="tf", numFeatures=10000)
 fulldata = hashingTF.transform(fulldata)
 print "TERM frequencies:"
 print fulldata.head()
@@ -252,17 +293,43 @@ print "IDF :"
 print fulldata.head()
 print "################"
 
+
+
+#OK we do the same for the search term
+# Step 1: split text field into words
+tokenizer = Tokenizer(inputCol="search_term_clean", outputCol="search_token")
+fulldata = tokenizer.transform(fulldata)
+print "Tokenized Search:"
+print fulldata.head()
+print "################"
+# Step 2: compute term frequencies
+hashingTF = HashingTF(inputCol="search_token", outputCol="tf_s", numFeatures=10000)
+fulldata = hashingTF.transform(fulldata)
+print "TERM frequencies:"
+print fulldata.head()
+print "################"
+# Step 3: compute inverse document frequencies
+idfs = IDF(inputCol="tf_s", outputCol="tf_idfs")
+idfsModel = idfs.fit(fulldata)
+fulldata = idfsModel.transform(fulldata)
+print "IDF :"
+print fulldata.head()
+print "################"
+
+
+
+
 # Step 4 new features column / rename old
 fulldata = sqlContext.createDataFrame(fulldata.rdd.map(newFeatures))
 print "NEW features column :"
 print fulldata.head()
 print "################"
-# Step 5: ALTERNATIVE ->ADD column with number of terms as another feature
-fulldata = sqlContext.createDataFrame(fulldata.rdd.map(addFeatureLen))  # add an extra column to tf features
-fulldata = fulldata.withColumnRenamed('tf_idf', 'tf_idf_plus')
-print "ADDED a column and renamed :"
-print fulldata.head()
-print "################"
+
+#CLEAN DATA
+#fulldata=fulldata.select(['product_uid','id','tf_idf_plus','tf_idfs_plus','relevance'])
+
+#COMPUTE COSINE
+
 
 # create NEW features & train and evaluate regression model
 # Step 1: create features

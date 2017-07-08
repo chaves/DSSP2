@@ -45,9 +45,6 @@ def tokenize(x):
         doc[i]=stemmer.stem(word.decode('UTF-8'))
     return ' '.join(doc)
 
-def mergeString(x,y):
-    return tokenize(x).join([' ',tokenize(y)])
-
 def fixEncoding(x):
     # fix encoding in fields name and value
     id = x['product_uid']
@@ -122,7 +119,6 @@ sc = SparkContext(appName="Example1")
 
 
 tokenize_udf = udf(tokenize,StringType())
-mergeString_udf = udf(mergeString,StringType(),StringType())
 
 sqlContext = HiveContext(sc)
 counter = 0
@@ -182,7 +178,8 @@ print "################"
 
 # TF-IDF features
 #Step 0 : make one mega text column text_clean
-fulldata = sqlContext.createDataFrame(fulldata.withColumn('text_clean', mergeString_udf(fulldata["product_title"],fulldata["attributes"])).rdd)
+fulldata = sqlContext.createDataFrame(fulldata.withColumn('title_clean', tokenize_udf(fulldata["product_title"])).rdd)
+fulldata = sqlContext.createDataFrame(fulldata.withColumn('attribute_clean', tokenize_udf(fulldata["attributes"])).rdd)
 
 # Step 1: split text field into words
 tokenizer = Tokenizer(inputCol="text_clean", outputCol="words_title")

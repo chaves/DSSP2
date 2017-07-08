@@ -244,7 +244,9 @@ fulldata = sqlContext.createDataFrame(fulldata.withColumn('text_clean_temp', sf.
 fulldata = sqlContext.createDataFrame(fulldata.withColumn('text_clean', sf.concat(sf.col('text_clean_temp'),sf.lit(' '), sf.col('description_clean'))).rdd)
 print fulldata.head()
 
-"""
+fulldata=fulldata.select(['product_uid','id','search_term','relevance','text_clean'])
+
+
 # Step 1: split text field into words
 tokenizer = Tokenizer(inputCol="text_clean", outputCol="words_title")
 fulldata = tokenizer.transform(fulldata)
@@ -296,4 +298,3 @@ result = lrModel.transform(sqlContext.createDataFrame(test))
 MSE = result.rdd.map(lambda r: (r['label'] - r['prediction']) ** 2).mean()
 print("Mean Squared Error = " + str(MSE))
 
-"""

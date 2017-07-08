@@ -17,7 +17,9 @@ import string
 import nltk
 from nltk.stem.porter import *
 from nltk.corpus import stopwords
-
+from pyspark.ml.regression import RandomForestRegressor
+from pyspark.ml import Pipeline
+from pyspark.ml.feature import VectorIndexer
 '''
 from pyspark import SparkContext
 import pyspark
@@ -102,6 +104,23 @@ def addFeatureLen(row):
 	#fill in the values for the fields
 	newRow=newRow(*data.values())
 	return newRow
+
+def addFeatureLen2(row):
+	vector=row['tf_idf_2']
+	size=vector.size
+	newVector={}
+	for i,v in enumerate(vector.indices):
+		newVector[v]=vector.values[i]
+	newVector[size]=len(vector.indices)
+	size+=1
+	#we cannot change the input Row so we need to create a new one
+	data=row.asDict()
+	data['tf_idf_2']= SparseVector(size,newVector)
+	#new Row object with specified NEW fields
+	newRow=Row(*data.keys())
+	#fill in the values for the fields
+	newRow=newRow(*data.values())
+	return newRow
 	
 def cleanData(row,model):
 	#we are going to fix search term field
@@ -117,12 +136,16 @@ def cleanData(row,model):
 	
 	
 def newFeatures(row):
-	vector=row['tf_idf']
-	data=row.asDict()
-	data['features']= DenseVector([len(vector.indices),vector.values.min()])
-	newRow=Row(*data.keys())
-	newRow=newRow(*data.values())
-	return newRow
+    vector1 = row['tf_idf']
+    vector2 = row['tf_idf_2']
+    cos = vector1.dot(vector2) / (sf.sqrt(vector1.dot(vector1) * vector2.dot(vector2) ))
+    data = row.asDict()
+    data['features'] = DenseVector([len(vector1.indices), vector1.values.min(),vector1.values.max(),len(vector2.indices), vector2.values.min(),vector2.values.max(),cos])
+    #data['features'] = DenseVector([len(vector1.indices), vector1.values.min(),vector1.values.max(),len(vector2.indices), vector2.values.min(),vector2.values.max()])
+    newRow = Row(*data.keys())
+    newRow = newRow(*data.values())
+    return newRow
+
 
 sc = SparkContext(appName="Example1")
 
@@ -217,12 +240,17 @@ print "Clean attribute"
 fulldata = sqlContext.createDataFrame(fulldata.withColumn('attribute_clean', tokenize_udf(fulldata["attributes"])).rdd)
 print "Clean description"
 fulldata = sqlContext.createDataFrame(fulldata.withColumn('description_clean', tokenize_udf(fulldata["product_description"])).rdd)
+print "Clean search"
+fulldata = sqlContext.createDataFrame(fulldata.withColumn('search_term_clean', tokenize_udf(fulldata["search_term"])).rdd)
+
 print "merge cleaning"
 fulldata = sqlContext.createDataFrame(fulldata.withColumn('text_clean_temp', sf.concat(sf.col('title_clean'),sf.lit(' '), sf.col('attribute_clean'))).rdd)
 fulldata = sqlContext.createDataFrame(fulldata.withColumn('text_clean', sf.concat(sf.col('text_clean_temp'),sf.lit(' '), sf.col('description_clean'))).rdd)
 print fulldata.head()
+print "column selection"
+print fulldata.head()
 
-
+fulldata=fulldata.select(['product_uid','id','search_term_clean','relevance','text_clean'])
 '''
 #EXAMPLE clean data with custom dictionary
 #Step 1: build dictionary model
@@ -242,7 +270,7 @@ print "Tokenized Title:"
 print fulldata.head()
 print "################"
 #Step 2: compute term frequencies
-hashingTF = HashingTF(inputCol="words_title", outputCol="tf")
+hashingTF = HashingTF(inputCol="words_title", outputCol="tf",numFeatures = 100000)
 fulldata = hashingTF.transform(fulldata)
 print "TERM frequencies:"
 print fulldata.head()
@@ -255,17 +283,40 @@ print "IDF :"
 print fulldata.head()
 print "################"
 
+
+#Step 1_bis: split text field into words
+tokenizer = Tokenizer(inputCol="search_term_clean", outputCol="words_title_2")
+fulldata = tokenizer.transform(fulldata)
+print "Tokenized Title2:"
+print fulldata.head()
+print "################"
+#Step 2_bis: compute term frequencies
+hashingTF = HashingTF(inputCol="words_title_2", outputCol="tf_2",numFeatures = 100000)
+fulldata = hashingTF.transform(fulldata)
+print "TERM frequencies2:"
+print fulldata.head()
+print "################"
+#Step 3_bis: compute inverse document frequencies
+idf = IDF(inputCol="tf_2", outputCol="tf_idf_2")
+idfModel = idf.fit(fulldata)
+fulldata = idfModel.transform(fulldata)
+print "IDF2 :"
+print fulldata.head()
+print "################"
+
 #Step 4 new features column / rename old
 fulldata=sqlContext.createDataFrame(fulldata.rdd.map(newFeatures))
 print "NEW features column :"
 print fulldata.head()
 print "################"
-#Step 5: ALTERNATIVE ->ADD column with number of terms as another feature
-fulldata=sqlContext.createDataFrame(fulldata.rdd.map(addFeatureLen))#add an extra column to tf features
-fulldata=fulldata.withColumnRenamed('tf_idf', 'tf_idf_plus')
-print "ADDED a column and renamed :"
-print fulldata.head()
-print "################"
+
+
+#Step 5_bis: ALTERNATIVE ->ADD column with number of terms as another feature
+#fulldata=sqlContext.createDataFrame(fulldata.rdd.map(addFeatureLen2))#add an extra column to tf features
+#fulldata=fulldata.withColumnRenamed('tf_idf_2', 'tf_idf_plus_2')
+#print "ADDED a column and renamed :"
+#print fulldata.head()
+#print "################"
 
 
 
@@ -277,10 +328,14 @@ fulldata=fulldata.withColumnRenamed('relevance', 'label').select(['label','featu
 (train,test)=fulldata.rdd.randomSplit([0.8,0.2])
 
 #Initialize regresion model
-lr = LinearRegression(maxIter=10, regParam=0.3, elasticNetParam=0.8)
+#lr = LinearRegression(maxIter=10, regParam=0.3, elasticNetParam=0.8)
+featureIndexer = VectorIndexer(inputCol="features", outputCol="indexedFeatures", maxCategories=4).fit(sqlContext.createDataFrame(train))
+rf = RandomForestRegressor(featuresCol="indexedFeatures")
+pipeline = Pipeline(stages=[featureIndexer, rf])
 
 # Fit the model
-lrModel = lr.fit(sqlContext.createDataFrame(train))
+#lrModel = lr.fit(sqlContext.createDataFrame(train))
+lrModel = pipeline.fit(sqlContext.createDataFrame(train))
 
 #Apply model to test data
 result=lrModel.transform(sqlContext.createDataFrame(test))

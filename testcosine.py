@@ -22,7 +22,7 @@ from nltk.corpus import stopwords
 
 #sc = SparkContext(appName="Example1")
 
-a = SparseVector(4, [1, 3], [3.0, 4.0])
+a = SparseVector(4, {1: 1.0, 3: 5.5})
 print a.dot(a)
 print a
 #print a.dot(array([1., 2., 3., 4.]))

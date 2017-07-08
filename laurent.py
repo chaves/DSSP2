@@ -159,7 +159,7 @@ print "################"
 
 # TF-IDF features
 # Step 1: split text field into words
-tokenizer = Tokenizer(inputCol="product_title", outputCol="words_title")
+tokenizer = Tokenizer(inputCol="product_title_clean", outputCol="words_title")
 fulldata = tokenizer.transform(fulldata)
 print "Tokenized Title:"
 print fulldata.head()

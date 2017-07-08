@@ -69,7 +69,7 @@ def fixEncodingDescription(x):
     if x['product_description'] is not None:
         product_description = x['product_description'].encode("UTF-8")
     # return tuple instead of row
-    return (id, [product_description])
+    return (id, product_description)
 
 
 

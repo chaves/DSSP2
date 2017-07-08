@@ -134,7 +134,7 @@ print data.head(5)
 print "################"
 
 print "add new column################"
-fulldata = sqlContext.createDataFrame(fulldata.rdd.map(addFeatureClean))
+data = sqlContext.createDataFrame(fulldata.rdd.map(addFeatureClean))
 data = data.withColumn('product_title_clean', tokenize_udf(data["product_title"]))
 
 #data =sqlContext.createDataFrame(data.rdd.map(lambda row:Row(row.__fields__ + ["product_title_clean"])(row + (tokenize_udf(row.product_title), ))))

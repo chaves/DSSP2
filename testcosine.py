@@ -31,6 +31,8 @@ b = SparseVector(10000, {15: 0.2668, 67: 3.0431, 69: 3.6234, 93: 2.6627, 315: 7.
 
 print a.dot(b)
 
+print sf.sqrt(a.dot(a) * b.dot(b) )
+
 #rint a.dot(array([[1, 1], [2, 2], [3, 3], [4, 4]]))
 
 #print cos

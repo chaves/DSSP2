@@ -5,6 +5,7 @@ from pyspark.sql import SQLContext
 from pyspark.sql.types import StringType
 from pyspark.sql.functions import udf
 from pyspark.sql import HiveContext
+from pyspark.sql import functions as sf
 from pyspark.sql import SparkSession
 from pyspark.ml.feature import HashingTF, IDF, Tokenizer
 from pyspark.mllib.linalg import SparseVector
@@ -36,14 +37,17 @@ stopwords = ['i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you',
 
 
 def tokenize(x):
-    p=set(string.punctuation)
-    doc=''.join([c for c in str(x.encode("UTF-8")).lower() if c not in p ])
-    words=doc.split()
-    doc =[ word for word in words if word not in stopwords  ]
-    stemmer=PorterStemmer()
-    for i,word in enumerate(doc):
-        doc[i]=stemmer.stem(word.decode('UTF-8'))
-    return ' '.join(doc)
+    try:
+        p=set(string.punctuation)
+        doc=''.join([c for c in str(x.encode("UTF-8")).lower() if c not in p ])
+        words=doc.split()
+        doc =[ word for word in words if word not in stopwords  ]
+        stemmer=PorterStemmer()
+        for i,word in enumerate(doc):
+            doc[i]=stemmer.stem(word.decode('UTF-8'))
+        return ' '.join(doc)
+    except:
+        return ''
 
 def fixEncoding(x):
     # fix encoding in fields name and value
@@ -57,6 +61,17 @@ def fixEncoding(x):
     retVal = '%s %s.' % (name, value)
     # return tuple instead of row
     return (id, [retVal])
+
+def fixEncodingDescription(x):
+    # fix encoding in fields name and value
+    id = x['product_uid']
+    product_description = ''
+    if x['product_description'] is not None:
+        product_description = x['product_description'].encode("UTF-8")
+    # return tuple instead of row
+    return (id, product_description)
+
+
 
 
 def addFeatureLen(row):
@@ -76,6 +91,22 @@ def addFeatureLen(row):
     newRow = newRow(*data.values())
     return newRow
 
+def addFeatureClean(row):
+	vector=row['product_title_clean']
+	size=vector.size
+	newVector={}
+	for i,v in enumerate(vector.indices):
+		newVector[v]=vector.values[i]
+	newVector[size]=len(vector.indices)
+	size+=1
+	#we cannot change the input Row so we need to create a new one
+	data=row.asDict()
+	data['product_title_clean']= SparseVector(size,newVector)
+	#new Row object with specified NEW fields
+	newRow=Row(*data.keys())
+	#fill in the values for the fields
+	newRow=newRow(*data.values())
+	return newRow
 
 def cleanData(row, model):
     # we are going to fix search term field
@@ -104,7 +135,6 @@ sc = SparkContext(appName="Example1")
 
 tokenize_udf = udf(tokenize,StringType())
 
-
 sqlContext = HiveContext(sc)
 counter = 0
 print "###############"
@@ -118,13 +148,45 @@ print data.head(5)
 print "################"
 
 print "add new column################"
-data.withColumn('product_title_clean', tokenize_udf(data["product_title"])).select('product_title','product_title_clean').show(5)
+#data = sqlContext.createDataFrame(data.withColumn('product_title_clean', tokenize_udf(data["product_title"])).rdd)
+#data = data.withColumn('product_title_clean', tokenize_udf(data["product_title"]))
+
+
+#data =sqlContext.createDataFrame(data.rdd.map(lambda row:Row(row.__fields__ + ["product_title_clean"])(row + (tokenize_udf(row.product_title), ))))
 
 print "test clean data################"
 print data.head(5)
 
 
 
+
+#JOIN ON PRODUCT DEFINITION
+
+descritpion = sqlContext.read.format("com.databricks.spark.csv"). \
+    option("header", "true"). \
+    option("inferSchema", "true"). \
+    load("/dssp/datacamp/product_descriptions.csv").repartition(100)
+
+print "descritpion loaded - head:"
+print descritpion.head()
+print "################"
+
+# attributes: 0-N lines per product
+# Step 1 : fix encoding and get data as an RDD (id,"<attribute name> <value>")
+descRDD = descritpion.rdd.map(fixEncodingDescription)
+print "new RDD:"
+print descRDD.first()
+print "################"
+# Step 4 join data
+fulldatatemp = data.join(descRDD, ['product_uid'], 'left_outer')
+print "Joined Data:"
+print fulldatatemp.head()
+print "################"
+
+
+
+
+#JOIN ON ATTRIBUTES
 
 attributes = sqlContext.read.format("com.databricks.spark.csv"). \
     option("header", "true"). \
@@ -152,14 +214,26 @@ print "New dataframe from aggregated attributes:"
 print atrDF.head()
 print "################"
 # Step 4 join data
-fulldata = data.join(atrDF, ['product_uid'], 'left_outer')
+fulldata = fulldatatemp.join(atrDF, ['product_uid'], 'left_outer')
 print "Joined Data:"
 print fulldata.head()
 print "################"
 
 # TF-IDF features
+#Step 0 : make one mega text column text_clean
+print "Clean title"
+fulldata = sqlContext.createDataFrame(fulldata.withColumn('title_clean', tokenize_udf(fulldata["product_title"])).rdd)
+print "Clean attribute"
+fulldata = sqlContext.createDataFrame(fulldata.withColumn('attribute_clean', tokenize_udf(fulldata["attributes"])).rdd)
+print "Clean description"
+fulldata = sqlContext.createDataFrame(fulldata.withColumn('description_clean', tokenize_udf(fulldata["product_description"])).rdd)
+print "merge cleaning"
+fulldata = sqlContext.createDataFrame(fulldata.withColumn('text_clean_temp', sf.concat(sf.col('title_clean'),sf.lit(' '), sf.col('attribute_clean'))).rdd)
+fulldata = sqlContext.createDataFrame(fulldata.withColumn('text_clean', sf.concat(sf.col('text_clean_temp'),sf.lit(' '), sf.col('description_clean'))).rdd)
+print fulldata.head()
+
 # Step 1: split text field into words
-tokenizer = Tokenizer(inputCol="product_title", outputCol="words_title")
+tokenizer = Tokenizer(inputCol="text_clean", outputCol="words_title")
 fulldata = tokenizer.transform(fulldata)
 print "Tokenized Title:"
 print fulldata.head()

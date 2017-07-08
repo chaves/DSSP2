@@ -76,6 +76,22 @@ def addFeatureLen(row):
     newRow = newRow(*data.values())
     return newRow
 
+def addFeatureClean(row):
+	vector=row['product_title_clean']
+	size=vector.size
+	newVector={}
+	for i,v in enumerate(vector.indices):
+		newVector[v]=vector.values[i]
+	newVector[size]=len(vector.indices)
+	size+=1
+	#we cannot change the input Row so we need to create a new one
+	data=row.asDict()
+	data['product_title_clean']= SparseVector(size,newVector)
+	#new Row object with specified NEW fields
+	newRow=Row(*data.keys())
+	#fill in the values for the fields
+	newRow=newRow(*data.values())
+	return newRow
 
 def cleanData(row, model):
     # we are going to fix search term field
@@ -118,9 +134,10 @@ print data.head(5)
 print "################"
 
 print "add new column################"
-#data = data.withColumn('product_title_clean', tokenize_udf(data["product_title"]))
+fulldata = sqlContext.createDataFrame(fulldata.rdd.map(addFeatureClean))
+data = data.withColumn('product_title_clean', tokenize_udf(data["product_title"]))
 
-data =sqlContext.createDataFrame(data.rdd.map(lambda row:Row(row.__fields__ + ["product_title_clean"])(row + (tokenize_udf(row.product_title), ))))
+#data =sqlContext.createDataFrame(data.rdd.map(lambda row:Row(row.__fields__ + ["product_title_clean"])(row + (tokenize_udf(row.product_title), ))))
 
 print "test clean data################"
 print data.head(5)

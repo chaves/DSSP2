@@ -5,6 +5,7 @@ from pyspark.sql import SQLContext
 from pyspark.sql.types import StringType
 from pyspark.sql.functions import udf
 from pyspark.sql import HiveContext
+from pyspark.sql import functions as sf
 from pyspark.sql import SparkSession
 from pyspark.ml.feature import HashingTF, IDF, Tokenizer
 from pyspark.mllib.linalg import SparseVector
@@ -36,14 +37,17 @@ stopwords = ['i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you',
 
 
 def tokenize(x):
-    p=set(string.punctuation)
-    doc=''.join([c for c in str(x.encode("UTF-8")).lower() if c not in p ])
-    words=doc.split()
-    doc =[ word for word in words if word not in stopwords  ]
-    stemmer=PorterStemmer()
-    for i,word in enumerate(doc):
-        doc[i]=stemmer.stem(word.decode('UTF-8'))
-    return ' '.join(doc)
+    try:
+        p=set(string.punctuation)
+        doc=''.join([c for c in str(x.encode("UTF-8")).lower() if c not in p ])
+        words=doc.split()
+        doc =[ word for word in words if word not in stopwords  ]
+        stemmer=PorterStemmer()
+        for i,word in enumerate(doc):
+            doc[i]=stemmer.stem(word.decode('UTF-8'))
+        return ' '.join(doc)
+    except:
+        return ''
 
 def fixEncoding(x):
     # fix encoding in fields name and value
@@ -178,8 +182,15 @@ print "################"
 
 # TF-IDF features
 #Step 0 : make one mega text column text_clean
+print "Clean title"
 fulldata = sqlContext.createDataFrame(fulldata.withColumn('title_clean', tokenize_udf(fulldata["product_title"])).rdd)
+print "Clean attribute"
 fulldata = sqlContext.createDataFrame(fulldata.withColumn('attribute_clean', tokenize_udf(fulldata["attributes"])).rdd)
+
+"""
+df = df.withColumn('joined_column', 
+                    sf.concat(sf.col('colname1'),sf.lit('_'), sf.col('colname2')))
+"""
 
 # Step 1: split text field into words
 tokenizer = Tokenizer(inputCol="text_clean", outputCol="words_title")

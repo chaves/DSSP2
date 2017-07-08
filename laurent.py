@@ -62,6 +62,17 @@ def fixEncoding(x):
     # return tuple instead of row
     return (id, [retVal])
 
+def fixEncodingDescription(x):
+    # fix encoding in fields name and value
+    id = x['product_uid']
+    product_description = ''
+    if x['product_description'] is not None:
+        product_description = x['product_description'].encode("UTF-8")
+    # return tuple instead of row
+    return (id, [product_description])
+
+
+
 
 def addFeatureLen(row):
     vector = row['tf_idf']
@@ -149,6 +160,34 @@ print data.head(5)
 
 
 
+#JOIN ON PRODUCT DEFINITION
+
+descritpion = sqlContext.read.format("com.databricks.spark.csv"). \
+    option("header", "true"). \
+    option("inferSchema", "true"). \
+    load("/dssp/datacamp/product_descriptions.csv").repartition(100)
+
+print "descritpion loaded - head:"
+print descritpion.head()
+print "################"
+
+# attributes: 0-N lines per product
+# Step 1 : fix encoding and get data as an RDD (id,"<attribute name> <value>")
+descRDD = descritpion.rdd.map(fixEncodingDescription)
+print "new RDD:"
+print descRDD.first()
+print "################"
+# Step 4 join data
+fulldata = data.join(descRDD, ['product_uid'], 'left_outer')
+print "Joined Data:"
+print fulldata.head()
+print "################"
+
+
+
+
+#JOIN ON ATTRIBUTES
+
 attributes = sqlContext.read.format("com.databricks.spark.csv"). \
     option("header", "true"). \
     option("inferSchema", "true"). \
@@ -186,9 +225,11 @@ print "Clean title"
 fulldata = sqlContext.createDataFrame(fulldata.withColumn('title_clean', tokenize_udf(fulldata["product_title"])).rdd)
 print "Clean attribute"
 fulldata = sqlContext.createDataFrame(fulldata.withColumn('attribute_clean', tokenize_udf(fulldata["attributes"])).rdd)
-
+print "Clean description"
+fulldata = sqlContext.createDataFrame(fulldata.withColumn('description_clean', tokenize_udf(fulldata["product_description"])).rdd)
 print "merge cleaning"
-fulldata = sqlContext.createDataFrame(fulldata.withColumn('text_clean', sf.concat(sf.col('title_clean'),sf.lit(' '), sf.col('attribute_clean'))).rdd)
+fulldata = sqlContext.createDataFrame(fulldata.withColumn('text_clean_temp', sf.concat(sf.col('title_clean'),sf.lit(' '), sf.col('attribute_clean'))).rdd)
+fulldata = sqlContext.createDataFrame(fulldata.withColumn('text_clean', sf.concat(sf.col('text_clean_temp'),sf.lit(' '), sf.col('description_clean'))).rdd)
 print fulldata.head()
 
 # Step 1: split text field into words

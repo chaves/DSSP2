@@ -17,6 +17,9 @@ import string
 import nltk
 from nltk.stem.porter import *
 from nltk.corpus import stopwords
+from pyspark.ml.regression import RandomForestRegressor
+from pyspark.ml import Pipeline
+from pyspark.ml.feature import VectorIndexer
 
 #!pip install -U nltk
 
@@ -150,7 +153,7 @@ def newFeatures(row):
     except:
         pass
     data = row.asDict()
-    data['features'] = DenseVector([cos])
+    data['features'] = DenseVector([len(vector1.indices), vector1.values.min(),vector1.values.max(),len(vector2.indices), vector2.values.min(),vector2.values.max(),cos])
     newRow = Row(*data.keys())
     newRow = newRow(*data.values())
     return newRow
@@ -338,11 +341,16 @@ fulldata = fulldata.withColumnRenamed('relevance', 'label').select(['label', 'fe
 # Simple evaluation : train and test split
 (train, test) = fulldata.rdd.randomSplit([0.8, 0.2])
 
-# Initialize regresion model
-lr = LinearRegression(maxIter=10, regParam=0.3, elasticNetParam=0.8)
+#Initialize regresion model
+#lr = LinearRegression(maxIter=10, regParam=0.3, elasticNetParam=0.8)
+featureIndexer = VectorIndexer(inputCol="features", outputCol="indexedFeatures", maxCategories=4).fit(sqlContext.createDataFrame(train))
+rf = RandomForestRegressor(featuresCol="indexedFeatures")
+pipeline = Pipeline(stages=[featureIndexer, rf])
 
 # Fit the model
-lrModel = lr.fit(sqlContext.createDataFrame(train))
+#lrModel = lr.fit(sqlContext.createDataFrame(train))
+lrModel = pipeline.fit(sqlContext.createDataFrame(train))
+
 
 # Apply model to test data
 result = lrModel.transform(sqlContext.createDataFrame(test))

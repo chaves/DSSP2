@@ -62,14 +62,16 @@ def fixEncoding(x):
     # return tuple instead of row
     return (id, [retVal])
 
-def fixEncodingDescription(x):
-    # fix encoding in fields name and value
-    id = x['product_uid']
-    product_description = ''
-    if x['product_description'] is not None:
-        product_description = x['product_description'].encode("UTF-8")
-    # return tuple instead of row
-    return (id, product_description)
+
+def fixEncoding2(x):
+	# fix encoding in fields name and value
+	id=x['product_uid']
+	product_description=''
+	if x['product_description'] is not None:
+		product_description=x['product_description'].encode("UTF-8")
+	retVal='%s.'%product_description
+	#return tuple instead of row
+	return (id,[retVal])
 
 
 
@@ -160,28 +162,6 @@ print data.head(5)
 
 
 
-#JOIN ON PRODUCT DEFINITION
-
-descritpion = sqlContext.read.format("com.databricks.spark.csv"). \
-    option("header", "true"). \
-    option("inferSchema", "true"). \
-    load("/dssp/datacamp/product_descriptions.csv").repartition(100)
-
-print "descritpion loaded - head:"
-print descritpion.head()
-print "################"
-
-# attributes: 0-N lines per product
-# Step 1 : fix encoding and get data as an RDD (id,"<attribute name> <value>")
-descRDD = descritpion.rdd.map(fixEncodingDescription)
-print "new RDD:"
-print descRDD.first()
-print "################"
-# Step 4 join data
-fulldatatemp = data.join(descRDD, ['product_uid'], 'left_outer')
-print "Joined Data:"
-print fulldatatemp.head()
-print "################"
 
 
 
@@ -215,6 +195,38 @@ print atrDF.head()
 print "################"
 # Step 4 join data
 fulldata = fulldatatemp.join(atrDF, ['product_uid'], 'left_outer')
+print "Joined Data:"
+print fulldata.head()
+print "################"
+
+productDescription = sqlContext.read.format("com.databricks.spark.csv"). \
+    option("header", "true"). \
+    option("inferSchema", "true"). \
+    load("/dssp/datacamp/product_descriptions.csv").repartition(100)
+
+print "product description loaded - head:"
+print productDescription.head()
+print "################"
+
+
+#product description: 0-N lines per product
+#Step 1 : fix encoding and get data as an RDD (id,"<product description> <value>")
+prodDesRDD=productDescription.rdd.map(fixEncoding2)
+print "new RDD:"
+print prodDesRDD.first()
+print "################"
+#Step 2 : group product descriptions by product id
+prodDesAG=prodDesRDD.reduceByKey(lambda x,y:x+y).map(lambda x:(x[0],' '.join(x[1])))
+print "Aggregated by product_id:"
+print prodDesAG.first()
+print "################"
+#Step 3 create new dataframe from aggregated product description
+prodDesDF=sqlContext.createDataFrame(prodDesAG,["product_uid", "product_description"])
+print "New dataframe from aggregated product descriptions:"
+print prodDesDF.head()
+print "################"
+#Step 4 join data
+fulldata=fulldata.join(prodDesDF,['product_uid'],'left_outer')
 print "Joined Data:"
 print fulldata.head()
 print "################"

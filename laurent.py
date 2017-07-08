@@ -144,10 +144,10 @@ def cleanData(row, model):
 def newFeatures(row):
     vector1 = row['tf_idf']
     vector2 = row['tf_idfs']
-    
-    cos = vector1.dot(vector2) / (sf.sqrt(vector1.values.sum ** 2 * vector2.values.sum ** 2 ))
+
+    cos = vector1.dot(vector2) / (sf.sqrt(vector1.dot(vector1) * vector2.dot(vector2) ))
     data = row.asDict()
-    data['features'] = DenseVector([len(vector1.indices), vector1.values.min(),len(vector2.indices), vector2.values.min(),cos ])
+    data['features'] = DenseVector([cos])
     newRow = Row(*data.keys())
     newRow = newRow(*data.values())
     return newRow

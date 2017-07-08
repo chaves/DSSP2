@@ -243,9 +243,11 @@ print "merge cleaning"
 fulldata = sqlContext.createDataFrame(fulldata.withColumn('text_clean_temp', sf.concat(sf.col('title_clean'),sf.lit(' '), sf.col('attribute_clean'))).rdd)
 fulldata = sqlContext.createDataFrame(fulldata.withColumn('text_clean', sf.concat(sf.col('text_clean_temp'),sf.lit(' '), sf.col('description_clean'))).rdd)
 print fulldata.head()
+print "Clean search"
+fulldata = sqlContext.createDataFrame(fulldata.withColumn('search_term_clean', tokenize_udf(fulldata["search_term"])).rdd)
 
-fulldata=fulldata.select(['product_uid','id','search_term','relevance','text_clean'])
-
+fulldata=fulldata.select(['product_uid','id','search_term_clean','relevance','text_clean'])
+fulldata=fulldata.withColumnRenamed('search_term_clean', 'search_term')
 
 # Step 1: split text field into words
 tokenizer = Tokenizer(inputCol="text_clean", outputCol="words_title")

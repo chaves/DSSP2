@@ -194,7 +194,7 @@ print "New dataframe from aggregated attributes:"
 print atrDF.head()
 print "################"
 # Step 4 join data
-fulldata = fulldatatemp.join(atrDF, ['product_uid'], 'left_outer')
+fulldata = data.join(atrDF, ['product_uid'], 'left_outer')
 print "Joined Data:"
 print fulldata.head()
 print "################"

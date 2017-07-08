@@ -24,12 +24,12 @@ from nltk.corpus import stopwords
 
 a = SparseVector(4, [1, 3], [3.0, 4.0])
 print a.dot(a)
-
+print a
 #print a.dot(array([1., 2., 3., 4.]))
 
 b = SparseVector(4, [2, 4], [1.0, 2.0])
 print a.dot(b)
-
+print b
 #rint a.dot(array([[1, 1], [2, 2], [3, 3], [4, 4]]))
 
 

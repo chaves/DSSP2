@@ -142,12 +142,15 @@ def cleanData(row, model):
 
 
 def newFeatures(row):
-    vector = row['tf_idf']
+    vector1 = row['tf_idf']
+    vector2 = row['tf_idfs']
+    cos = sf.sum(vector1 * vector2)  / (sf.sqrt(sf.sum(vector1 ** 2) * sf.sqrt(sf.sum(vector2 ** 2) )))
     data = row.asDict()
-    data['features'] = DenseVector([len(vector.indices), vector.values.min()])
+    data['features'] = DenseVector([len(vector1.indices), vector1.values.min(),len(vector2.indices), vector2.values.min(),cos ])
     newRow = Row(*data.keys())
     newRow = newRow(*data.values())
     return newRow
+
 
 
 sc = SparkContext(appName="Example1")
@@ -286,22 +289,11 @@ print "IDF :"
 print fulldata.head()
 print "################"
 
-# Step 4 new features column / rename old
-fulldata = sqlContext.createDataFrame(fulldata.rdd.map(newFeatures))
-print "NEW features column :"
-print fulldata.head()
-print "################"
-# Step 5: ALTERNATIVE ->ADD column with number of terms as another feature
-fulldata = sqlContext.createDataFrame(fulldata.rdd.map(addFeatureLen))  # add an extra column to tf features
-fulldata = fulldata.withColumnRenamed('tf_idf', 'tf_idf_plus')
-print "ADDED a column and renamed :"
-print fulldata.head()
-print "################"
 
 
 #OK we do the same for the search term
 # Step 1: split text field into words
-tokenizer = Tokenizer(inputCol="search_clean", outputCol="search_token")
+tokenizer = Tokenizer(inputCol="search_term_clean", outputCol="search_token")
 fulldata = tokenizer.transform(fulldata)
 print "Tokenized Search:"
 print fulldata.head()
@@ -320,18 +312,19 @@ print "IDF :"
 print fulldata.head()
 print "################"
 
+
+
+
 # Step 4 new features column / rename old
 fulldata = sqlContext.createDataFrame(fulldata.rdd.map(newFeatures))
 print "NEW features column :"
 print fulldata.head()
 print "################"
-# Step 5: ALTERNATIVE ->ADD column with number of terms as another feature
-fulldata = sqlContext.createDataFrame(fulldata.rdd.map(addFeatureLenS))  # add an extra column to tf features
-fulldata = fulldata.withColumnRenamed('tf_idfs', 'tf_idfs_plus')
-print "ADDED a column and renamed :"
-print fulldata.head()
-print "################"
 
+#CLEAN DATA
+#fulldata=fulldata.select(['product_uid','id','tf_idf_plus','tf_idfs_plus','relevance'])
+
+#COMPUTE COSINE
 
 
 # create NEW features & train and evaluate regression model

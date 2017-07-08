@@ -118,7 +118,9 @@ print data.head(5)
 print "################"
 
 print "add new column################"
-data = data.withColumn('product_title_clean', tokenize_udf(data["product_title"]))
+#data = data.withColumn('product_title_clean', tokenize_udf(data["product_title"]))
+
+data.rdd.map(lambda row:Row(row.__fields__ + ["product_title_clean"])(row + (tokenize_udf(row.product_title), )))
 
 print "test clean data################"
 print data.head(5)

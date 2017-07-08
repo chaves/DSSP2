@@ -93,6 +93,24 @@ def addFeatureLen(row):
     newRow = newRow(*data.values())
     return newRow
 
+
+def addFeatureLenS(row):
+    vector = row['tf_idfs']
+    size = vector.size
+    newVector = {}
+    for i, v in enumerate(vector.indices):
+        newVector[v] = vector.values[i]
+    newVector[size] = len(vector.indices)
+    size += 1
+    # we cannot change the input Row so we need to create a new one
+    data = row.asDict()
+    data['tf_idfs'] = SparseVector(size, newVector)
+    # new Row object with specified NEW fields
+    newRow = Row(*data.keys())
+    # fill in the values for the fields
+    newRow = newRow(*data.values())
+    return newRow
+
 def addFeatureClean(row):
 	vector=row['product_title_clean']
 	size=vector.size
@@ -247,16 +265,15 @@ print "Clean search"
 fulldata = sqlContext.createDataFrame(fulldata.withColumn('search_term_clean', tokenize_udf(fulldata["search_term"])).rdd)
 
 fulldata=fulldata.select(['product_uid','id','search_term_clean','relevance','text_clean'])
-fulldata=fulldata.withColumnRenamed('search_term_clean', 'search_term')
 
 # Step 1: split text field into words
-tokenizer = Tokenizer(inputCol="text_clean", outputCol="words_title")
+tokenizer = Tokenizer(inputCol="text_clean", outputCol="text_token")
 fulldata = tokenizer.transform(fulldata)
-print "Tokenized Title:"
+print "Tokenized Text:"
 print fulldata.head()
 print "################"
 # Step 2: compute term frequencies
-hashingTF = HashingTF(inputCol="words_title", outputCol="tf")
+hashingTF = HashingTF(inputCol="text_token", outputCol="tf", numFeatures=10000)
 fulldata = hashingTF.transform(fulldata)
 print "TERM frequencies:"
 print fulldata.head()
@@ -280,6 +297,42 @@ fulldata = fulldata.withColumnRenamed('tf_idf', 'tf_idf_plus')
 print "ADDED a column and renamed :"
 print fulldata.head()
 print "################"
+
+
+#OK we do the same for the search term
+# Step 1: split text field into words
+tokenizer = Tokenizer(inputCol="search_clean", outputCol="search_token")
+fulldata = tokenizer.transform(fulldata)
+print "Tokenized Search:"
+print fulldata.head()
+print "################"
+# Step 2: compute term frequencies
+hashingTF = HashingTF(inputCol="search_token", outputCol="tf_s", numFeatures=10000)
+fulldata = hashingTF.transform(fulldata)
+print "TERM frequencies:"
+print fulldata.head()
+print "################"
+# Step 3: compute inverse document frequencies
+idfs = IDF(inputCol="tf_s", outputCol="tf_idfs")
+idfsModel = idfs.fit(fulldata)
+fulldata = idfsModel.transform(fulldata)
+print "IDF :"
+print fulldata.head()
+print "################"
+
+# Step 4 new features column / rename old
+fulldata = sqlContext.createDataFrame(fulldata.rdd.map(newFeatures))
+print "NEW features column :"
+print fulldata.head()
+print "################"
+# Step 5: ALTERNATIVE ->ADD column with number of terms as another feature
+fulldata = sqlContext.createDataFrame(fulldata.rdd.map(addFeatureLenS))  # add an extra column to tf features
+fulldata = fulldata.withColumnRenamed('tf_idfs', 'tf_idfs_plus')
+print "ADDED a column and renamed :"
+print fulldata.head()
+print "################"
+
+
 
 # create NEW features & train and evaluate regression model
 # Step 1: create features

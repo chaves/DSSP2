@@ -178,9 +178,9 @@ print "new RDD:"
 print descRDD.first()
 print "################"
 # Step 4 join data
-fulldata = data.join(descRDD, ['product_uid'], 'left_outer')
+fulldatatemp = data.join(descRDD, ['product_uid'], 'left_outer')
 print "Joined Data:"
-print fulldata.head()
+print fulldatatemp.head()
 print "################"
 
 
@@ -214,7 +214,7 @@ print "New dataframe from aggregated attributes:"
 print atrDF.head()
 print "################"
 # Step 4 join data
-fulldata = data.join(atrDF, ['product_uid'], 'left_outer')
+fulldata = fulldatatemp.join(atrDF, ['product_uid'], 'left_outer')
 print "Joined Data:"
 print fulldata.head()
 print "################"

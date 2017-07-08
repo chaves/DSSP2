@@ -123,7 +123,7 @@ data.withColumn('product_title_clean', tokenize_udf(data["product_title"])).sele
 print "test clean data################"
 print data.head(5)
 
-"""
+
 
 
 attributes = sqlContext.read.format("com.databricks.spark.csv"). \
@@ -209,4 +209,3 @@ result = lrModel.transform(sqlContext.createDataFrame(test))
 MSE = result.rdd.map(lambda r: (r['label'] - r['prediction']) ** 2).mean()
 print("Mean Squared Error = " + str(MSE))
 
-"""
